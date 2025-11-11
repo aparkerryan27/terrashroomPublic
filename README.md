@@ -1,15 +1,8 @@
 # terrashroom
 
-This is the Terrashroom monorepo.
+There's a set of headers next to the ESP32 designed for attaching a programmer harness. Check out the little PCB screenshot inside terrashroom board.png for a better sense of the physical object and where the pins are. 
 
-
-To explore pcb files, check out the PCB-Files repo.
-The latest I could find was FINAL 1.6 or whatever. 
-I uploaded the zip for a given board or board section into easyeda.com
-
-There's a set of pins next to the ESP32 designed for grounding. Check out terrashroom board.png for a better sense of the physical object and where the pins are. 
-
-Use this with a bed-of-nails / boot board for ESP32, and some female header jacks, to flash new firmware to the main board.
+Use this with a bed-of-nails / universal programmer board for ESP32, and some female header jacks, to flash new firmware to the main board.
 
 As for the camera...... We will try to flash that seperately after breaking into the watertight camera compartment. Who knows
 
@@ -27,16 +20,8 @@ tests/                  # REST/OTA acceptance scripts (TODO)
 ```
 
 ### First-time ESPHome bring-up
-
-1. `cp esphome/secrets.example.yaml esphome/secrets.yaml` and set your Wi-Fi + OTA passwords.
-2. Install ESPHome (`pip install esphome`) if you have not already.
-[TODO: add some notes about brew install / pip install other required packages, like esphome]
-3. Plug into the chamber’s UART header, then run:
-   ```
-   esphome run esphome/terrashroom.yaml
-   ```
-   This builds, flashes over USB, and immediately enables OTA + the ESPHome web server.
-4. After the first USB flash, future updates are OTA by re-running the same command while the device is on the network.
+- `cp esphome/secrets.example.yaml esphome/secrets.yaml` and set your Wi-Fi + OTA passwords.
+- Install ESPHome (`brew OR pip install esphome`) if you have not already. You may also need esptool and some other programs, but execution failures should illuminate the missing links as you attempt to build.
 
 # Use
 To initially override the Terrashroom default code, plug the device into power (to support the heavy pull of the capacitors and such) and then
@@ -54,20 +39,19 @@ on a computer on the same wifi network as your device and the update will be sen
 ### TODO
 
 - Add documentation for humidity-driven control logic once those commits land.
-- Flesh out `hardware/` with the exact GPIO map from `chamber/src/Habitat.h`.
 - Populate `tests/` with scripts that curl the REST API and exercise OTA/safe-mode acceptance criteria.
-- Stabilize the build toolchain. Either cache espressif32@6.12.0 locally or run once with unrestricted network so esphome run/OTA isn’t blocked. Likewise, pin PlatformIO in the YAML (platformio_options) to avoid random package upgrades mid-port. I've had issues with having platformio internal to the project (instead of just installing at ~/, where it works), so I want to only do this if it's gonna help things. 
+- Stabilize the build toolchain. Either cache espressif32@6.12.0 locally or run once with unrestricted network so esphome run/OTA isn’t blocked. Likewise, pin PlatformIO in the YAML (platformio_options) to avoid random package upgrades mid-port.
 - Long term: get the camera working, and an external server to store photos that will turn them into timelapses. 
-- Implement native HDC3022 support. For now the firmware includes `includes/sensors_hdc1080.yaml`; if you have HDC3022 hardware you’ll need to swap to `includes/sensors_hdc3022.yaml` once the custom component stub there is filled in.
+- Implement native HDC3022 support. For now the firmware includes `includes/sensors_hdc1080.yaml`; if you have HDC3022 hardware you’ll need to swap to `includes/sensors_hdc3022.yaml` once the custom component stub there is filled in. In the meantime, the hdc1080 default from esphome appears to work fine to recieve info.
 
 
 ### GPIO Notes
 
-- GPIO12 (heater MOSFET) and GPIO15 (water read enable) are ESP32 strapping pins. Avoid adding external pull-ups/pull-downs or large capacitances on these lines or the module may fail to boot. If you must probe them, disconnect power afterwards so the strapping levels return to ESP32 defaults before the next reset.
-- The water-level sensor lives on GPIO23 and is only powered when `Water Read Enable` (GPIO15) is high. ESPHome now runs a short self-test at boot—check the logs to confirm it prints `Water level sensor reports OK during self-test` before sealing the chamber.
+- GPIO12 (heater MOSFET) and GPIO15 (water read enable) are ESP32 strapping pins. Avoid adding external pull-ups/pull-downs or large capacitances on these lines or the module may fail to boot. If you must probe them, disconnect power afterwards so the strapping levels return to ESP32 defaults before the next reset. THIS may be the source of failure that eventually prevented Parker's board from booting. This is being investigated.
+- The water-level sensor lives on GPIO23 and is only powered when `Water Read Enable` (GPIO15) is high, so that we don't constantly run voltage through the water tank and heat the water or cause corrosion.
 
 
-# Other Things going forward
+# Personal Notes for Plan Going Forward
 
 Control Loop Plan
 
@@ -82,8 +66,6 @@ Mushroom Profiles Selector
 Create a template select entity (ESPHome select:) listing species from Mushroom.h (Pink Oyster, Lion’s Mane, etc.) and store the choice in a global.
 On selection change, set the humidity/temperature/CO₂ (fan speed) numbers to that mushroom’s recommended ranges; optionally trigger an info log so users know the profile applied.
 Add a text_sensor (template) that surfaces the species description from Mushroom.h on the web UI, updating automatically when the selection changes, so growers see the target parameters and notes.
-
-
 
 
 REST Test Scripts
